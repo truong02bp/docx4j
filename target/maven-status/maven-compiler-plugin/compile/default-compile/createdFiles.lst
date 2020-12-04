@@ -1,0 +1,4 @@
+com/demo/entities/Person.class
+com/demo/HomeController.class
+com/demo/Application.class
+com/demo/service/impl/DocxService.class
