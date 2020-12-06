@@ -61,7 +61,8 @@ public class HomeController
 
     @GetMapping("/")
     public ResponseEntity<?> readDocx() throws Exception {
-        docxService.addHtmlToDocx();
+        String content = map.get(id);
+        docxService.addHtmlToDocx(content);
 //        docxService.readMailMerge();
 //        docxService.docxToHtml();
 //        docxService.docxToHtmlWithSpire();

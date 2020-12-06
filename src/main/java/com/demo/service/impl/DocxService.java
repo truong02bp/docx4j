@@ -10,16 +10,21 @@ import com.spire.doc.documents.HorizontalAlignment;
 import com.spire.doc.documents.Paragraph;
 import com.spire.doc.fields.*;
 import org.docx4j.XmlUtils;
+import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.jaxb.Context;
 import org.docx4j.jaxb.XPathBinderAssociationIsPartialException;
+import org.docx4j.model.datastorage.migration.VariablePrepare;
 import org.docx4j.model.fields.merge.DataFieldName;
 import org.docx4j.model.fields.merge.MailMerger;
 import org.docx4j.openpackaging.contenttype.ContentType;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.exceptions.InvalidFormatException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+import org.docx4j.openpackaging.parts.JaxbXmlPartAltChunkHost;
 import org.docx4j.openpackaging.parts.PartName;
+import org.docx4j.openpackaging.parts.WordprocessingML.AltChunkType;
 import org.docx4j.openpackaging.parts.WordprocessingML.AlternativeFormatInputPart;
+import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.relationships.Relationship;
 import org.docx4j.wml.*;
 import org.springframework.stereotype.Service;
@@ -113,10 +118,10 @@ public class DocxService {
 //        }
 //    }
 
-    public void addHtmlToDocx() throws InvalidFormatException, JAXBException, XPathBinderAssociationIsPartialException {
+    public void addHtmlToDocx(String content) throws Exception {
         FileInputStream is = null;
         try {
-            is = new FileInputStream("/home/truong02_bp/Downloads/1.ADD CK GH,DKX 1NG KCC.docx");
+            is = new FileInputStream("/home/truong02_bp/Desktop/1.ADD-CK-GHDKX-1NG-KCC.docx");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -127,27 +132,21 @@ public class DocxService {
             e.printStackTrace();
         }
         if (document != null) {
-            List<Object> list = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:p",true);
-            System.out.println(document.getMainDocumentPart().getJAXBNodesViaXPath("//w:p",true).size());
-            P p = Context.getWmlObjectFactory().createP();
-            Text text = new Text();
-            text.setValue("HAHAHAAHAAHA");
-            p.getContent().add(new R().getContent().add(text));
-            list.add(p);
-            System.out.println(list.size());
-            System.out.println(document.getMainDocumentPart().getJAXBNodesViaXPath("//w:p",true).size());
-//            for (int i=0;i<list.size();i++){
-//                if (list.get(i).toString().equals("abc")) {
-//                    System.out.println("ok");
-//                    list.remove(i);
-//                    list.add(i - 1, p);
-//                }
-//            }
-            try {
-                document.save(new File("/home/truong02_bp/Downloads/a.docx"));
-            } catch (Docx4JException e) {
-                e.printStackTrace();
-            }
+            VariablePrepare.prepare(document);
+            MainDocumentPart documentPart = document.getMainDocumentPart();
+            String html = "<html><head><title>Import me</title></head><body><p style='color:#ff0000;'>Hello World!</p></body></html>";
+            AlternativeFormatInputPart afiPart = new AlternativeFormatInputPart(new PartName("/hw.html"));
+            afiPart.setBinaryData(html.toString().getBytes());
+            afiPart.setContentType(new ContentType("text/html"));
+            Relationship altChunkRel = documentPart.addTargetPart(afiPart);
+            CTAltChunk ac = Context.getWmlObjectFactory().createCTAltChunk();
+            ac.setId(altChunkRel.getId());
+            HashMap<String, String> mappings = new HashMap<String, String>();
+            mappings.put("abc", ac.toString());
+            documentPart.variableReplace(mappings);
+            document.save(new File("/home/truong02_bp/Desktop/result.docx"));
+//            XHTMLImporterImpl importer = new XHTMLImporterImpl(document);
+//            pkg.getMainDocumentPart().getContent().addAll(importer.convert(xhtml, null));
         }
     }
 
