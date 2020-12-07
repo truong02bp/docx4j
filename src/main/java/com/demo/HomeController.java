@@ -21,8 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Controller
-public class HomeController
-{
+public class HomeController {
     @Autowired
     private DocxService docxService;
 
@@ -30,24 +29,24 @@ public class HomeController
     private FileRepository fileRepository;
 
     private static Map<Integer, String> map = new HashMap<>();
-    private static int id=0;
+    private static int id = 0;
 
     @GetMapping("/trang-chu")
     public ResponseEntity<byte[]> homePage() throws Exception {
         Document document = new Document();
         document.loadFromFile("/home/truong02_bp/Desktop/template.docx");
         String[] fields = document.getMailMerge().getMergeFieldNames();
-        Map<String,String> values = new HashMap<>();
-        Person person = new Person("Trường","Hà Đông","Siten","0964279710");
+        Map<String, String> values = new HashMap<>();
+        Person person = new Person("Trường", "Hà Đông", "Siten", "0964279710");
         String[] items = person.toString().split(";");
         for (String item : items) {
             String[] data = item.split("=");
-            values.put(data[0],data[1]);
+            values.put(data[0], data[1]);
         }
-        String[] value = new String[fields.length+1];
-        for (int i=0;i<fields.length;i++)
+        String[] value = new String[fields.length + 1];
+        for (int i = 0; i < fields.length; i++)
             value[i] = values.get(fields[i]);
-        document.getMailMerge().execute(fields,value);
+        document.getMailMerge().execute(fields, value);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
 //        document.saveToStream(os,FileFormat.Docx);
         byte[] bytes = os.toByteArray();
@@ -55,44 +54,33 @@ public class HomeController
         String type = "docx";
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                .header(HttpHeaders.CONTENT_DISPOSITION,"attachment;filename="+name+"."+type)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + name + "." + type)
                 .body(bytes);
     }
 
-    @GetMapping("/")
-    public ResponseEntity<?> readDocx() throws Exception {
-        String content = map.get(id);
-        docxService.addHtmlToDocx(content);
-//        docxService.readMailMerge();
-//        docxService.docxToHtml();
-//        docxService.docxToHtmlWithSpire();
-//        docxService.htmlToDocxWithSpire();
-//        docxService.resolveMailMerge();
-//        docxService.docxToHtmlWithSpire();
-//        docxService.htmlToDocx();
-        return ResponseEntity.ok("ok");
-    }
 
     @GetMapping("/docx")
-    public ResponseEntity<byte[]> ckeditor(@RequestParam("id") int id){
+    public ResponseEntity<byte[]> ckeditor(@RequestParam("id") int id) throws Exception {
         String content = map.get(id);
-        byte[] bytes = content.getBytes();
+        byte[] bytes = docxService.addHtmlToDocx(content).toByteArray();
         String name = "result";
         String type = "docx";
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                .header(HttpHeaders.CONTENT_DISPOSITION,"attachment;filename="+name+"."+type)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + name + "." + type)
                 .body(bytes);
     }
+
     @GetMapping("/ckeditor")
-    public ModelAndView ckeditor(){
+    public ModelAndView ckeditor() {
         ModelAndView mav = new ModelAndView("ckeditor");
         return mav;
     }
+
     @PostMapping("/add")
-    public ResponseEntity<Integer> toDocx(@RequestBody Content content){
+    public ResponseEntity<Integer> toDocx(@RequestBody Content content) {
         id++;
-        map.put(id,content.getContent());
+        map.put(id, content.getContent());
         return ResponseEntity.ok(id);
     }
 }

@@ -1,14 +1,9 @@
 package com.demo.service.impl;
 
 
-import com.spire.doc.CssStyleSheetType;
-import com.spire.doc.Document;
-import com.spire.doc.FileFormat;
-import com.spire.doc.Section;
-import com.spire.doc.collections.SectionCollection;
-import com.spire.doc.documents.HorizontalAlignment;
-import com.spire.doc.documents.Paragraph;
-import com.spire.doc.fields.*;
+import com.google.common.base.Preconditions;
+import org.docx4j.TextUtils;
+import org.docx4j.TraversalUtil;
 import org.docx4j.XmlUtils;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.jaxb.Context;
@@ -18,11 +13,8 @@ import org.docx4j.model.fields.merge.DataFieldName;
 import org.docx4j.model.fields.merge.MailMerger;
 import org.docx4j.openpackaging.contenttype.ContentType;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
-import org.docx4j.openpackaging.exceptions.InvalidFormatException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
-import org.docx4j.openpackaging.parts.JaxbXmlPartAltChunkHost;
 import org.docx4j.openpackaging.parts.PartName;
-import org.docx4j.openpackaging.parts.WordprocessingML.AltChunkType;
 import org.docx4j.openpackaging.parts.WordprocessingML.AlternativeFormatInputPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.relationships.Relationship;
@@ -33,6 +25,7 @@ import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import java.io.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 @Service
 public class DocxService {
@@ -118,7 +111,8 @@ public class DocxService {
 //        }
 //    }
 
-    public void addHtmlToDocx(String content) throws Exception {
+    public ByteArrayOutputStream addHtmlToDocx(String content) throws Exception {
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
         FileInputStream is = null;
         try {
             is = new FileInputStream("/home/truong02_bp/Desktop/1.ADD-CK-GHDKX-1NG-KCC.docx");
@@ -132,22 +126,50 @@ public class DocxService {
             e.printStackTrace();
         }
         if (document != null) {
-            VariablePrepare.prepare(document);
-            MainDocumentPart documentPart = document.getMainDocumentPart();
-            String html = "<html><head><title>Import me</title></head><body><p style='color:#ff0000;'>Hello World!</p></body></html>";
-            AlternativeFormatInputPart afiPart = new AlternativeFormatInputPart(new PartName("/hw.html"));
-            afiPart.setBinaryData(html.toString().getBytes());
-            afiPart.setContentType(new ContentType("text/html"));
-            Relationship altChunkRel = documentPart.addTargetPart(afiPart);
-            CTAltChunk ac = Context.getWmlObjectFactory().createCTAltChunk();
-            ac.setId(altChunkRel.getId());
-            HashMap<String, String> mappings = new HashMap<String, String>();
-            mappings.put("abc", ac.toString());
-            documentPart.variableReplace(mappings);
-            document.save(new File("/home/truong02_bp/Desktop/result.docx"));
-//            XHTMLImporterImpl importer = new XHTMLImporterImpl(document);
-//            pkg.getMainDocumentPart().getContent().addAll(importer.convert(xhtml, null));
+            String html = "<html><body>" + content + "</body></html>";
+            XHTMLImporterImpl importer = new XHTMLImporterImpl(document);
+            // look for all P elements in the specified object
+            final List<P> paragraphs = new ArrayList<>();
+            MainDocumentPart mainPart = document.getMainDocumentPart();
+            new TraversalUtil(mainPart, new TraversalUtil.CallbackImpl() {
+                @Override
+                public List<Object> apply(Object o) {
+                    if (o instanceof P) {
+                        paragraphs.add((P) o);
+                    }
+                    return null;
+                }
+            });
+            for (final P paragraph : paragraphs) {
+                final StringWriter paragraphText = new StringWriter();
+                try {
+                    TextUtils.extractText(paragraph, paragraphText);
+                } catch (Exception ex) {
+                    System.out.println("Toang");
+                }
+                final String identifier = paragraphText.toString();
+                if (identifier.equals("abc")) {
+                    List<Object> listToModify;
+                    if (paragraph.getParent() instanceof Tc) {
+                        // paragraph located in table-cell
+                        final Tc parent = (Tc) paragraph.getParent();
+                        listToModify = parent.getContent();
+                    } else {
+                        // paragraph located in main document part
+                        listToModify = mainPart.getContent();
+                    }
+                    if (listToModify != null) {
+                        int index = listToModify.indexOf(paragraph);
+                        // remove the paragraph
+                        listToModify.remove(index);
+                        // add html
+                        listToModify.addAll(index, importer.convert(html, null));
+                    }
+                }
+            }
+            document.save(result);
         }
+        return result;
     }
 
     public void readMailMerge() {
