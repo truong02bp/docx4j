@@ -15,6 +15,7 @@ import org.docx4j.openpackaging.contenttype.ContentType;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.PartName;
+import org.docx4j.openpackaging.parts.WordprocessingML.AltChunkType;
 import org.docx4j.openpackaging.parts.WordprocessingML.AlternativeFormatInputPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.relationships.Relationship;
@@ -42,7 +43,7 @@ public class DocxService {
 //
 //    public void docxToHtmlWithSpire() {
 //        String outPath = "/home/truong02_bp/Desktop/result";
-//        String inputPath = "/home/truong02_bp/Downloads/1.ADD CK GH,DKX 1NG KCC.docx";
+//        String inputPath = "files/1.ADD-CK-GHDKX-1NG-KCC.docx";
 //        Document document = new Document();
 //        document.loadFromFile(inputPath);
 //        document.getHtmlExportOptions().setImageEmbedded(true);
@@ -62,7 +63,7 @@ public class DocxService {
 //
 //    public void resolveMailMerge() throws Exception {
 //        String outPath = "/home/truong02_bp/Desktop/solve";
-//        String inputPath = "/home/truong02_bp/Downloads/test.docx";
+//        String inputPath = "files/test.docx";
 //        Document document = new Document();
 //        document.loadFromFile(inputPath);
 //        solveFormField(document , createTemplate(document));
@@ -115,7 +116,7 @@ public class DocxService {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         FileInputStream is = null;
         try {
-            is = new FileInputStream("/home/truong02_bp/Desktop/1.ADD-CK-GHDKX-1NG-KCC.docx");
+            is = new FileInputStream("files/1.ADD-CK-GHDKX-1NG-KCC.docx");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -171,11 +172,55 @@ public class DocxService {
         }
         return result;
     }
+    public ByteArrayOutputStream addHtmlToDocxVer2(String contentTag) throws Docx4JException, JAXBException {
+        FileInputStream is = null;
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        try {
+            is = new FileInputStream("files/1.ADD-CK-GHDKX-1NG-KCC.docx");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        WordprocessingMLPackage wordPackage = null;
+        try {
+            wordPackage = WordprocessingMLPackage.load(is);
+        } catch (Docx4JException e) {
+            e.printStackTrace();
+        }
+        if (wordPackage != null) {
+            String content = "<html><body>" + contentTag + "</body></html>";
+            MainDocumentPart mainDocumentPart = wordPackage.getMainDocumentPart();
+            Document document = mainDocumentPart.getJaxbElement();
+            Body body = document.getBody();
+            AlternativeFormatInputPart afiPart = new AlternativeFormatInputPart(new PartName("/hw.html"));
+            afiPart.setBinaryData(content.getBytes());
+            afiPart.setContentType(new ContentType("text/html"));
+            Relationship altChunkRel = wordPackage.getMainDocumentPart().addTargetPart(afiPart);
+            CTAltChunk ac = Context.getWmlObjectFactory().createCTAltChunk();
+            ac.setId(altChunkRel.getId());
+            List<Object> elementContent = body.getContent();
+            for (int i = 0; i < elementContent.size(); i++) {
+                Object child = elementContent.get(i);
+                if (elementContent.get(i) instanceof JAXBElement) child = ((JAXBElement<?>) child).getValue();
+                if (child.toString().equals("abc")) {
+                    elementContent.remove(i);
+                    mainDocumentPart.addAltChunk(AltChunkType.Xhtml, content.getBytes());
+                    body.getContent().add(i - 1, ac);
+                    break;
+                }
+            }
+            try {
+                wordPackage.save(result);
+            } catch (Docx4JException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
 
     public void readMailMerge() {
         FileInputStream is = null;
         try {
-            is = new FileInputStream("/home/truong02_bp/Downloads/1.ADD CK GH,DKX 1NG KCC.docx");
+            is = new FileInputStream("files/1.ADD-CK-GHDKX-1NG-KCC.docx");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -296,7 +341,7 @@ public class DocxService {
 
 
 //    public void docxToHtml() throws Exception {
-//        File file = new File("/home/truong02_bp/Downloads/1.ADD CK GH,DKX 1NG KCC.docx");
+//        File file = new File("files/1.ADD-CK-GHDKX-1NG-KCC.docx");
 //        FileInputStream fis = new FileInputStream(file);
 //        WordprocessingMLPackage docx = WordprocessingMLPackage.load(fis);
 //        String path = "/home/truong02_bp/Desktop/result";
@@ -328,3 +373,4 @@ public class DocxService {
 //        docx.save(new File("/home/truong02_bp/Desktop/result.docx"));
 //    }
 }
+

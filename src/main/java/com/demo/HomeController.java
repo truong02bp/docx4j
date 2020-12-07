@@ -4,6 +4,7 @@ import com.demo.entities.File;
 import com.demo.entities.Person;
 import com.demo.repository.FileRepository;
 import com.demo.service.impl.DocxService;
+import com.demo.service.impl.DocxServiceCreatedByHalt;
 import com.spire.doc.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +23,8 @@ import java.util.Map;
 
 @Controller
 public class HomeController {
+    @Autowired
+    private DocxServiceCreatedByHalt docxServiceCreatedByHalt;
     @Autowired
     private DocxService docxService;
 
@@ -62,7 +65,7 @@ public class HomeController {
     @GetMapping("/docx")
     public ResponseEntity<byte[]> ckeditor(@RequestParam("id") int id) throws Exception {
         String content = map.get(id);
-        byte[] bytes = docxService.addHtmlToDocx(content).toByteArray();
+        byte[] bytes = docxServiceCreatedByHalt.addHtmlToDocx(content).toByteArray();
         String name = "result";
         String type = "docx";
         return ResponseEntity.ok()

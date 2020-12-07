@@ -1,4 +1,8 @@
-com/demo/entities/Person.class
+com/demo/Content.class
 com/demo/HomeController.class
-com/demo/Application.class
 com/demo/service/impl/DocxService.class
+com/demo/entities/Person.class
+com/demo/entities/File.class
+com/demo/Application.class
+com/demo/repository/FileRepository.class
+com/demo/config/WebConfig.class
