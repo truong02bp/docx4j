@@ -30,8 +30,8 @@
         </dependency>
         <dependency>
             <groupId>e-iceblue</groupId>
-            <artifactId>spire.doc.free</artifactId>
-            <version>2.7.3</version>
+            <artifactId>spire.pdf.free</artifactId>
+            <version>3.9.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.docx4j/docx4j-core -->
         <dependency>
