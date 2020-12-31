@@ -69,16 +69,16 @@ public class HomeController {
                 .body(bytes);
     }
 
-    @GetMapping("/ckeditor")
-    public ResponseEntity<byte[]> ckeditor() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("application/pdf"));
-        String filename = "pdf1.pdf";
-        headers.add("content-disposition", "inline;filename=" + filename);
-        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
-        ResponseEntity<byte[]> result = new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
-        return result;
-    }
+//    @GetMapping("/ckeditor")
+//    public ResponseEntity<byte[]> ckeditor() {
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.setContentType(MediaType.parseMediaType("application/pdf"));
+//        String filename = "pdf1.pdf";
+//        headers.add("content-disposition", "inline;filename=" + filename);
+//        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+//        ResponseEntity<byte[]> result = new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
+//        return result;
+//    }
 
     @GetMapping("/merge")
     public void merge(){

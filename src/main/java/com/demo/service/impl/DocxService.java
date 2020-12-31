@@ -1,34 +1,23 @@
 package com.demo.service.impl;
 
 
-import com.google.common.base.Preconditions;
-import com.spire.pdf.FileFormat;
-import com.spire.pdf.PdfDocument;
 import org.docx4j.TextUtils;
 import org.docx4j.TraversalUtil;
 import org.docx4j.XmlUtils;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
-import org.docx4j.jaxb.Context;
 import org.docx4j.jaxb.XPathBinderAssociationIsPartialException;
-import org.docx4j.model.datastorage.migration.VariablePrepare;
 import org.docx4j.model.fields.merge.DataFieldName;
 import org.docx4j.model.fields.merge.MailMerger;
-import org.docx4j.openpackaging.contenttype.ContentType;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
-import org.docx4j.openpackaging.parts.PartName;
-import org.docx4j.openpackaging.parts.WordprocessingML.AlternativeFormatInputPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
-import org.docx4j.relationships.Relationship;
 import org.docx4j.wml.*;
 import org.springframework.stereotype.Service;
 
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.logging.Logger;
 
 @Service
 public class DocxService {
@@ -93,21 +82,10 @@ public class DocxService {
         return result;
     }
 
-    public byte[] test(){
-        File file = new File("C:\\Users\\truon\\Downloads\\test.pdf");
-        Properties props = System.getProperties();
-        props.setProperty("javax.accessibility.assistive_technologies", "");
-        PdfDocument pdfDocument = new PdfDocument();
-        pdfDocument.loadFromFile(String.valueOf(file),FileFormat.PDF);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        pdfDocument.saveToStream(outputStream, FileFormat.PDF);
-        return outputStream.toByteArray();
-    }
-
     public void fillMailMerge() {
         FileInputStream is = null;
         try {
-            is = new FileInputStream("C:\\Users\\truon\\Desktop\\1.ADD-CK-GHDKX-1NG-KCC.docx");
+            is = new FileInputStream("/home/huy/Desktop/1.ADD-CK-GHDKX-1NG-KCC.docx");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -123,20 +101,20 @@ public class DocxService {
             try {
                 list = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
                         true);
-            } catch (JAXBException e) {
-                e.printStackTrace();
-            } catch (XPathBinderAssociationIsPartialException e) {
+            } catch (JAXBException | XPathBinderAssociationIsPartialException e) {
                 e.printStackTrace();
             }
-            for (Object o : list) {
-                o = XmlUtils.unwrap(o);
-                CTFFCheckBox checkBox = (CTFFCheckBox) o;
-                BooleanDefaultTrue booleanDefaultTrue = new BooleanDefaultTrue();
-                booleanDefaultTrue.setVal(true);
-                checkBox.setChecked(booleanDefaultTrue);
-                CTFFData data = (CTFFData) checkBox.getParent();
-                CTFFName name = (CTFFName) data.getNameOrEnabledOrCalcOnExit().get(0).getValue();
-            }
+            if (list != null)
+                for (Object o : list) {
+                    o = XmlUtils.unwrap(o);
+                    CTFFCheckBox checkBox = (CTFFCheckBox) o;
+                    BooleanDefaultTrue booleanDefaultTrue = new BooleanDefaultTrue();
+                    booleanDefaultTrue.setVal(true);
+                    checkBox.setChecked(booleanDefaultTrue);
+                    // get name of checkbox
+//                    CTFFData data = (CTFFData) checkBox.getParent();
+//                    CTFFName name = (CTFFName) data.getNameOrEnabledOrCalcOnExit().get(0).getValue();
+                }
             Map<DataFieldName, String> values = new HashMap<>();
             Random random = new Random();
             String[] content = {"TỪ NAY DUYÊN KIẾP", "BỎ LẠI PHÍA SAU", "NGÀY VÀ BÓNG TỐI", "CHẲNG CÒN KHÁC NHAU"
@@ -158,7 +136,7 @@ public class DocxService {
             }
 
             try {
-                document.save(new File("C:\\Users\\truon\\Desktop\\result.docx"));
+                document.save(new File("/home/huy/Desktop/result.docx"));
             } catch (Docx4JException e) {
                 e.printStackTrace();
             }
@@ -207,10 +185,11 @@ public class DocxService {
                 String value = stringTokenizer.nextToken();
                 if (value.equals("MERGEFIELD")) {
                     String nextToken = stringTokenizer.nextToken();
-                    nextToken = nextToken.substring(0,nextToken.lastIndexOf("«"));
                     if (nextToken.contains("\""))
                         nextToken = nextToken.substring(1, nextToken.length() - 1);
-                    System.out.println(nextToken);
+                    int index =  nextToken.lastIndexOf("«");
+                    if (index != -1)
+                        nextToken = nextToken.substring(0,index);
                     fields.add(nextToken);
                 }
             }
