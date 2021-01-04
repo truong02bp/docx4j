@@ -145,43 +145,27 @@ public class DocxService {
         List<P> result = new ArrayList<>();
         String[] values = text.trim().split("\n");
         ObjectFactory factory = new org.docx4j.wml.ObjectFactory();
+        int index = 1;
         if (!prefix.isEmpty()){
             P p = factory.createP();
             org.docx4j.wml.Text t = factory.createText();
-            t.setValue(prefix);
+            t.setValue(prefix+ " " + values[0]);
             org.docx4j.wml.R run = factory.createR();
             run.getContent().add(t);
             p.getContent().add(run);
             p.setPPr(template.getPPr());
             result.add(p);
         }
-        for (int i = 0; i < values.length; i++) {
+        else
+            index = 0;
+        for (int i = index; i < values.length; i++) {
             P p = factory.createP();
             org.docx4j.wml.Text t = factory.createText();
             t.setValue(values[i]);
             org.docx4j.wml.R run = factory.createR();
             run.getContent().add(t);
             p.getContent().add(run);
-            org.docx4j.wml.PPr ppr = factory.createPPr();
-            p.setPPr(ppr);
-            ppr.setPStyle(template.getPPr().getPStyle());
-            ppr.setSpacing(template.getPPr().getSpacing());
-            ppr.setInd(template.getPPr().getInd());
-            PPrBase.NumPr numPr = factory.createPPrBaseNumPr();
-            ppr.setNumPr(numPr);
-            PPrBase.NumPr.NumId numIdElement = factory.createPPrBaseNumPrNumId();
-            numPr.setNumId(numIdElement);
-            numIdElement.setVal(BigInteger.valueOf(2));
-            PPrBase.NumPr.Ilvl ilvlElement = factory.createPPrBaseNumPrIlvl();
-            numPr.setIlvl(ilvlElement);
-            if (prefix.isEmpty())
-                ilvlElement.setVal(BigInteger.valueOf(0));
-            else{
-                PPrBase.NumPr level = template.getPPr().getNumPr();
-                if (level != null)
-                    ilvlElement.setVal(BigInteger.ONE.add(level.getIlvl().getVal()));
-            }
-
+            p.setPPr(template.getPPr());
             result.add(p);
         }
         return result;
@@ -227,7 +211,7 @@ public class DocxService {
             for (String mailMerge : mailMerges) {
                 String value = content[random.nextInt(4)];
                 if (mailMerge.equals("ĐT_HDTC") || mailMerge.equals("Lãi_suất_ghi_trên_KUNN") || mailMerge.equals("ĐT_HDTC")) {
-                    document = replaceTextByBullets(document, "Điện thoại 1\nĐiện thoại 2\nĐiện thoại 3", mailMerge);
+                    document = replaceTextByBullets(document, "0964279710\nĐiện thoại 2 : 12345\nĐiện thoại 3 : 5678", mailMerge);
                 } else
                     values.put(new DataFieldName(mailMerge), value);
             }
