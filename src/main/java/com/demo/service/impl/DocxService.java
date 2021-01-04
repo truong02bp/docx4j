@@ -5,6 +5,7 @@ import org.docx4j.TextUtils;
 import org.docx4j.TraversalUtil;
 import org.docx4j.XmlUtils;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
+import org.docx4j.dml.CTTextAutonumberBullet;
 import org.docx4j.jaxb.XPathBinderAssociationIsPartialException;
 import org.docx4j.model.fields.merge.DataFieldName;
 import org.docx4j.model.fields.merge.MailMerger;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import java.io.*;
+import java.math.BigInteger;
 import java.util.*;
 
 @Service
@@ -82,10 +84,113 @@ public class DocxService {
         return result;
     }
 
+    public WordprocessingMLPackage replaceTextByBullets(WordprocessingMLPackage document, String text, String key) {
+        final List<P> paragraphs = new ArrayList<>();
+        MainDocumentPart mainPart = document.getMainDocumentPart();
+        new TraversalUtil(mainPart, new TraversalUtil.CallbackImpl() {
+            @Override
+            public List<Object> apply(Object o) {
+                if (o instanceof P) {
+                    paragraphs.add((P) o);
+                }
+                return null;
+            }
+        });
+        for (final P paragraph : paragraphs) {
+            final StringWriter paragraphText = new StringWriter();
+            try {
+                TextUtils.extractText(paragraph, paragraphText);
+            } catch (Exception ex) {
+                System.out.println("Toang");
+            }
+            final String identifier = paragraphText.toString();
+            if (identifier.contains(key)) {
+                String prefix = "";
+                if (identifier.lastIndexOf("MERGEFIELD " + key) != -1)
+                    prefix = identifier.substring(0,identifier.lastIndexOf("MERGEFIELD " + key));
+                List<Object> listToModify;
+                if (paragraph.getParent() instanceof Tc) {
+                    // paragraph located in table-cell
+                    final Tc parent = (Tc) paragraph.getParent();
+                    listToModify = parent.getContent();
+                } else {
+                    // paragraph located in main document part
+                    listToModify = mainPart.getContent();
+                }
+                if (listToModify != null) {
+                    int index = listToModify.indexOf(paragraph);
+                    // remove the paragraph
+                    listToModify.remove(index);
+                    // add html
+                    if (paragraph.getPPr().getNumPr() == null)
+                    {
+                        ObjectFactory factory = new ObjectFactory();
+                        PPrBase.NumPr numPr = factory.createPPrBaseNumPr();
+                        paragraph.getPPr().setNumPr(numPr);
+                        PPrBase.NumPr.NumId numIdElement = factory.createPPrBaseNumPrNumId();
+                        numPr.setNumId(numIdElement);
+                        numIdElement.setVal(BigInteger.ZERO);
+                        PPrBase.NumPr.Ilvl ilvlElement = factory.createPPrBaseNumPrIlvl();
+                        numPr.setIlvl(ilvlElement);
+                        ilvlElement.setVal(BigInteger.ZERO);
+                    }
+                    listToModify.addAll(index, createBullets(prefix, text, paragraph));
+                }
+            }
+        }
+        return document;
+    }
+
+    public List<P> createBullets(String prefix, String text, P template) {
+        List<P> result = new ArrayList<>();
+        String[] values = text.trim().split("\n");
+        ObjectFactory factory = new org.docx4j.wml.ObjectFactory();
+        if (!prefix.isEmpty()){
+            P p = factory.createP();
+            org.docx4j.wml.Text t = factory.createText();
+            t.setValue(prefix);
+            org.docx4j.wml.R run = factory.createR();
+            run.getContent().add(t);
+            p.getContent().add(run);
+            p.setPPr(template.getPPr());
+            result.add(p);
+        }
+        for (int i = 0; i < values.length; i++) {
+            P p = factory.createP();
+            org.docx4j.wml.Text t = factory.createText();
+            t.setValue(values[i]);
+            org.docx4j.wml.R run = factory.createR();
+            run.getContent().add(t);
+            p.getContent().add(run);
+            org.docx4j.wml.PPr ppr = factory.createPPr();
+            p.setPPr(ppr);
+            ppr.setPStyle(template.getPPr().getPStyle());
+            ppr.setSpacing(template.getPPr().getSpacing());
+            ppr.setInd(template.getPPr().getInd());
+            PPrBase.NumPr numPr = factory.createPPrBaseNumPr();
+            ppr.setNumPr(numPr);
+            PPrBase.NumPr.NumId numIdElement = factory.createPPrBaseNumPrNumId();
+            numPr.setNumId(numIdElement);
+            numIdElement.setVal(BigInteger.valueOf(2));
+            PPrBase.NumPr.Ilvl ilvlElement = factory.createPPrBaseNumPrIlvl();
+            numPr.setIlvl(ilvlElement);
+            if (prefix.isEmpty())
+                ilvlElement.setVal(BigInteger.valueOf(0));
+            else{
+                PPrBase.NumPr level = template.getPPr().getNumPr();
+                if (level != null)
+                    ilvlElement.setVal(BigInteger.ONE.add(level.getIlvl().getVal()));
+            }
+
+            result.add(p);
+        }
+        return result;
+    }
+
     public void fillMailMerge() {
         FileInputStream is = null;
         try {
-            is = new FileInputStream("/home/huy/Desktop/1.ADD-CK-GHDKX-1NG-KCC.docx");
+            is = new FileInputStream("C:\\Users\\truon\\Desktop\\1.ADD-CK-GHDKX-1NG-KCC.docx");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -118,25 +223,20 @@ public class DocxService {
             Map<DataFieldName, String> values = new HashMap<>();
             Random random = new Random();
             String[] content = {"TỪ NAY DUYÊN KIẾP", "BỎ LẠI PHÍA SAU", "NGÀY VÀ BÓNG TỐI", "CHẲNG CÒN KHÁC NHAU"
-                , "CHẲNG CÓ NƠI NÀO YÊN BÌNH", "ĐƯỢC NHƯ EM BÊN ANH"};
+                    , "CHẲNG CÓ NƠI NÀO YÊN BÌNH", "ĐƯỢC NHƯ EM BÊN ANH"};
             for (String mailMerge : mailMerges) {
                 String value = content[random.nextInt(4)];
-                if (mailMerge.equals("Biển_kiểm_soát"))
-                    values.put(new DataFieldName(mailMerge), "\r\nTruc\r\n" +
-                            "A\r\n" +
-                            "B");
-                else
+                if (mailMerge.equals("ĐT_HDTC") || mailMerge.equals("Lãi_suất_ghi_trên_KUNN") || mailMerge.equals("ĐT_HDTC")) {
+                    document = replaceTextByBullets(document, "Điện thoại 1\nĐiện thoại 2\nĐiện thoại 3", mailMerge);
+                } else
                     values.put(new DataFieldName(mailMerge), value);
             }
+
             MailMerger.setMERGEFIELDInOutput(MailMerger.OutputField.KEEP_MERGEFIELD);
             try {
                 MailMerger.performMerge(document, values, false);
-            } catch (Docx4JException e) {
-                e.printStackTrace();
-            }
 
-            try {
-                document.save(new File("/home/huy/Desktop/result.docx"));
+                document.save(new File("C:\\Users\\truon\\Desktop\\result.docx"));
             } catch (Docx4JException e) {
                 e.printStackTrace();
             }
@@ -187,9 +287,9 @@ public class DocxService {
                     String nextToken = stringTokenizer.nextToken();
                     if (nextToken.contains("\""))
                         nextToken = nextToken.substring(1, nextToken.length() - 1);
-                    int index =  nextToken.lastIndexOf("«");
+                    int index = nextToken.lastIndexOf("«");
                     if (index != -1)
-                        nextToken = nextToken.substring(0,index);
+                        nextToken = nextToken.substring(0, index);
                     fields.add(nextToken);
                 }
             }
