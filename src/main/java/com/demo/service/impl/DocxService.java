@@ -10,6 +10,7 @@ import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.convert.out.HTMLSettings;
 import org.docx4j.jaxb.Context;
 import org.docx4j.jaxb.XPathBinderAssociationIsPartialException;
+import org.docx4j.model.fields.FieldUpdater;
 import org.docx4j.model.fields.merge.DataFieldName;
 import org.docx4j.model.fields.merge.MailMerger;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
@@ -19,7 +20,6 @@ import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
 import org.docx4j.wml.*;
 
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
@@ -103,29 +103,35 @@ public class DocxService {
             e.printStackTrace();
         }
         if (document != null) {
-            List<String> mailMerges = getAllMailMerge(document.getMainDocumentPart().getContent());
+            List<String> mailMerges = new ArrayList<>();
             List<Object> checkboxes = null;
+            List<Object> textFields = null;
             try {
                 checkboxes = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
-                        true);
+                        false);
+                textFields = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:instrText ", true);
             } catch (JAXBException | XPathBinderAssociationIsPartialException e) {
                 e.printStackTrace();
             }
-            if (checkboxes != null)
-                for (Object o : checkboxes) {
-                    o = XmlUtils.unwrap(o);
-                    CTFFCheckBox checkBox = (CTFFCheckBox) o;
-                    BooleanDefaultTrue booleanDefaultTrue = new BooleanDefaultTrue();
-                    booleanDefaultTrue.setVal(true);
-                    checkBox.setChecked(booleanDefaultTrue);
-                    // get name of checkbox
-//                    CTFFData data = (CTFFData) checkBox.getParent();
-//                    CTFFName name = (CTFFName) data.getNameOrEnabledOrCalcOnExit().get(0).getValue();
-                }
             Map<DataFieldName, String> values = new HashMap<>();
             Random random = new Random();
             String[] content = {"TỪ NAY DUYÊN KIẾP", "BỎ LẠI PHÍA SAU", "NGÀY VÀ BÓNG TỐI", "CHẲNG CÒN KHÁC NHAU"
                     , "CHẲNG CÓ NƠI NÀO YÊN BÌNH", "ĐƯỢC NHƯ EM BÊN ANH"};
+            // solve check box
+            if (checkboxes != null)
+                for (Object o : checkboxes) {
+                    o = XmlUtils.unwrap(o);
+                    CTFFCheckBox checkBox = (CTFFCheckBox) o;
+                    CTFFData data = (CTFFData) checkBox.getParent();
+                    CTFFName ctffName = (CTFFName) data.getNameOrEnabledOrCalcOnExit().get(0).getValue();
+                    String name = ctffName.getVal();
+                    BooleanDefaultTrue booleanDefaultTrue = new BooleanDefaultTrue();
+                    booleanDefaultTrue.setVal(true);
+                    checkBox.setChecked(booleanDefaultTrue);
+                }
+            // solve merge field
+            if (textFields != null)
+                mailMerges = getAllMergeFields(textFields);
             for (String mailMerge : mailMerges) {
                 String value = content[random.nextInt(4)];
                 if (mailMerge.equals("ĐT_HDTC") || mailMerge.equals("Lãi_suất_ghi_trên_KUNN") || mailMerge.equals("ĐT_HDTC")) {
@@ -245,74 +251,21 @@ public class DocxService {
         return result;
     }
 
-
-    public List<String> getAllMailMerge(List<Object> objects) {
-        List<String> fields = new ArrayList<>();
-        for (Object o : objects) {
-            if (o instanceof JAXBElement) {
-                fields.addAll(getMailMergeFromTable(o));
-            } else
-                fields.addAll(getMailMerge(o.toString()));
-        }
-        return fields;
-    }
-
-    public List<String> getMailMergeFromTable(Object o) {
-        List<String> fields = new ArrayList<>();
-        o = ((JAXBElement<?>) o).getValue();
-        List<Object> texts = null;
-        if (o.getClass().equals(Tbl.class)) {
-            Tbl table = (Tbl) o;
-            texts = getAllElementFromObject(table, Text.class);
-        } else if (o.getClass().equals(CTBookmark.class)) {
-            CTBookmark ctBookmark = (CTBookmark) o;
-            texts = getAllElementFromObject(ctBookmark.getParent(), Text.class);
-        }
-        if (texts != null) {
-            StringBuilder stringBuilder = new StringBuilder("");
-            for (Object t :
-                    texts) {
-                Text tx = (Text) t;
-                stringBuilder.append(tx.getValue());
-            }
-            fields.addAll(getMailMerge(stringBuilder.toString()));
-        }
-        return fields;
-    }
-
-    public List<String> getMailMerge(String content) {
-        List<String> fields = new ArrayList<>();
-        if ((content.contains("MERGEFIELD") && content.contains("«") && content.contains("»"))) {
-            StringTokenizer stringTokenizer = new StringTokenizer(content, " ");
-            while (stringTokenizer.hasMoreTokens()) {
-                String value = stringTokenizer.nextToken();
-                if (value.equals("MERGEFIELD")) {
-                    String nextToken = stringTokenizer.nextToken();
-                    if (nextToken.contains("\""))
-                        nextToken = nextToken.substring(1, nextToken.length() - 1);
-                    int index = nextToken.lastIndexOf("«");
-                    if (index != -1)
-                        nextToken = nextToken.substring(0, index);
-                    fields.add(nextToken);
-                }
+    public List<String> getAllMergeFields(List<Object> textFields) {
+        List<String> mailMerges = new ArrayList<>();
+        for (Object o : textFields) {
+            o = XmlUtils.unwrap(o);
+            Text text = (Text) o;
+            String value = text.getValue();
+            String key = "MERGEFIELD ";
+            if (value.contains(key)) {
+                String name = value.substring(key.length());
+                if (name.contains("\""))
+                    name = name.substring(1, name.length() - 1);
+                mailMerges.add(name);
             }
         }
-        return fields;
-    }
-
-    private static List<Object> getAllElementFromObject(Object obj, Class<?> toSearch) {
-        List<Object> result = new ArrayList<>();
-        if (obj instanceof JAXBElement) obj = ((JAXBElement<?>) obj).getValue();
-
-        if (obj.getClass().equals(toSearch))
-            result.add(obj);
-        else if (obj instanceof ContentAccessor) {
-            List<?> children = ((ContentAccessor) obj).getContent();
-            for (Object child : children) {
-                result.addAll(getAllElementFromObject(child, toSearch));
-            }
-        }
-        return result;
+        return mailMerges;
     }
 
     public void docxToHtml() throws Exception {
