@@ -80,8 +80,24 @@ public class HomeController {
 //        return result;
 //    }
 
-    @GetMapping("/merge")
-    public void merge(){
-        docxService.fillMailMerge();
+    @GetMapping("/export-docx")
+    public ResponseEntity<?> exportDocx() {
+        byte[] bytes = docxService.fillMailMerge("docx");
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=result.docx")
+                .body(bytes);
+    }
+
+    @GetMapping("/export-pdf")
+    public ResponseEntity<?> exportPdf() {
+        byte[] bytes = docxService.fillMailMerge("pdf");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/pdf"));
+        String filename = "result.pdf";
+        headers.add("content-disposition", "inline;filename=" + filename);
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+        ResponseEntity<byte[]> result = new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
+        return result;
     }
 }
