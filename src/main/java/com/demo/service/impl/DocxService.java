@@ -4,21 +4,22 @@ package com.demo.service.impl;
 import com.documents4j.api.DocumentType;
 import com.documents4j.api.IConverter;
 import com.documents4j.job.LocalConverter;
-import org.docx4j.Docx4J;
-import org.docx4j.TextUtils;
-import org.docx4j.TraversalUtil;
-import org.docx4j.XmlUtils;
+import org.apache.commons.io.FileUtils;
+import org.docx4j.*;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
-import org.docx4j.convert.out.FOSettings;
+import org.docx4j.convert.out.HTMLSettings;
+import org.docx4j.jaxb.Context;
 import org.docx4j.jaxb.XPathBinderAssociationIsPartialException;
 import org.docx4j.model.fields.merge.DataFieldName;
 import org.docx4j.model.fields.merge.MailMerger;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
+import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
 import org.docx4j.wml.*;
 
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
@@ -91,30 +92,27 @@ public class DocxService {
     }
 
     public byte[] fillMailMerge(String type) {
-        FileInputStream is = null;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try {
-            is = new FileInputStream("C:\\Users\\truon\\Desktop\\1.ADD-CK-GHDKX-1NG-KCC.docx");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        InputStream is = null;
         WordprocessingMLPackage document = null;
         try {
+            is = new FileInputStream("C:\\Users\\truon\\Desktop\\1.ADD-CK-GHDKX-1NG-KCC.docx");
+//            is = new ByteArrayInputStream(file.getBytes());
             document = WordprocessingMLPackage.load(is);
-        } catch (Docx4JException e) {
+        } catch (IOException | Docx4JException e) {
             e.printStackTrace();
         }
         if (document != null) {
             List<String> mailMerges = getAllMailMerge(document.getMainDocumentPart().getContent());
-            List<Object> list = null;
+            List<Object> checkboxes = null;
             try {
-                list = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
+                checkboxes = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
                         true);
             } catch (JAXBException | XPathBinderAssociationIsPartialException e) {
                 e.printStackTrace();
             }
-            if (list != null)
-                for (Object o : list) {
+            if (checkboxes != null)
+                for (Object o : checkboxes) {
                     o = XmlUtils.unwrap(o);
                     CTFFCheckBox checkBox = (CTFFCheckBox) o;
                     BooleanDefaultTrue booleanDefaultTrue = new BooleanDefaultTrue();
@@ -316,117 +314,37 @@ public class DocxService {
         }
         return result;
     }
-//    public ByteArrayOutputStream exportDocx(String content){
-////        String outPath = "/home/truong02_bp/Desktop/value.docx";
-//        ByteArrayInputStream is = new ByteArrayInputStream(content.getBytes());
-//        Document document = new Document();
-//        document.loadFromStream(is,FileFormat.Html);
-//        ByteArrayOutputStream os = new ByteArrayOutputStream();
-//        document.saveToStream(os,FileFormat.Docx);
-//        return os;
-//    }
-//
-//    public void docxToHtmlWithSpire() {
-//        String outPath = "/home/truong02_bp/Desktop/result";
-//        String inputPath = "/home/truong02_bp/Downloads/1.ADD CK GH,DKX 1NG KCC.docx";
-//        Document document = new Document();
-//        document.loadFromFile(inputPath);
-//        document.getHtmlExportOptions().setImageEmbedded(true);
-//        document.getSections().get(0).getPageSetup().getMargins().setLeft(72f);
-//        document.getHtmlExportOptions().setCssStyleSheetType(CssStyleSheetType.Internal);
-//        document.saveToFile(outPath + ".html", FileFormat.Html);
-//    }
-//
-//    public void htmlToDocxWithSpire() {
-//        String outPath = "/home/truong02_bp/Desktop/value.docx";
-//        String inputPath = "/home/truong02_bp/Desktop/result.html";
-//        Document document = new Document();
-//        document.loadFromFile(inputPath);
-//        document.saveToFile(outPath, FileFormat.Docx);
-//        System.out.println(document.getSections().get(0).getPageSetup().getMargins().getLeft() + " " + document.getSections().get(0).getPageSetup().getMargins().getRight() + " " + document.getSections().get(0).getPageSetup().getMargins().getTop() + " " + document.getSections().get(0).getPageSetup().getMargins().getBottom());
-//    }
-//
-//    public void resolveMailMerge() throws Exception {
-//        String outPath = "/home/truong02_bp/Desktop/solve";
-//        String inputPath = "/home/truong02_bp/Downloads/test.docx";
-//        Document document = new Document();
-//        document.loadFromFile(inputPath);
-//        solveFormField(document , createTemplate(document));
-//        document.saveToFile(outPath + ".docx", FileFormat.Docx);
-//    }
-//
-//    public Map<String, String> createTemplate(Document document) {
-//        String[] values = {"0964279710", "Truong"};
-//        String[] template = {"TỪ NAY DUYÊN KIẾP", "BỎ LẠI PHÍA SAU", "NGÀY VÀ BÓNG TỐI", "CHẲNG CÒN KHÁC NHAU"
-//                , "CHẲNG CÓ NƠI NÀO YÊN BÌNH", "ĐƯỢC NHƯ EM BÊN ANH"};
-//        Random random = new Random();
-//        Map<String, String> map = new HashMap<>();
-//        for (Object o : document.getFields()) {
-//            if (o instanceof CheckBoxFormField) {
-//                CheckBoxFormField checkbox = (CheckBoxFormField) o;
-//                map.put(checkbox.getName(), String.valueOf(random.nextBoolean()));
-//            }
-//            else
-//            if (o instanceof TextFormField)
-//            {
-//                TextFormField field = (TextFormField) o;
-//                map.put(field.getName(),values[random.nextInt(2)]);
-//            }
-//            else
-//            if (o instanceof MergeField)
-//            {
-//                MergeField mergeField = (MergeField) o;
-//                map.put(mergeField.getFieldName(),template[random.nextInt(6)]);
-//            }
-//        }
-//        return map;
-//    }
-//
-//    public void solveFormField(Document document, Map<String, String> map) {
-//        for (Object o : document.getFields()) {
-//            if (o instanceof CheckBoxFormField) {
-//                CheckBoxFormField checkbox = (CheckBoxFormField) o;
-//                checkbox.setChecked(Boolean.parseBoolean(map.get(checkbox.getName()).toLowerCase()));
-//            } else if (o instanceof TextFormField) {
-//                TextFormField field = (TextFormField) o;
-//                field.setText(map.get(field.getName()));
-//            } else if (o instanceof MergeField) {
-//                MergeField mergeField = (MergeField) o;
-//                mergeField.setText(map.get(mergeField.getFieldName()));
-//            }
-//        }
-//    }
 
-//    public void docxToHtml() throws Exception {
-//        File file = new File("/home/truong02_bp/Downloads/1.ADD CK GH,DKX 1NG KCC.docx");
-//        FileInputStream fis = new FileInputStream(file);
-//        WordprocessingMLPackage docx = WordprocessingMLPackage.load(fis);
-//        String path = "/home/truong02_bp/Desktop/result";
-//        HTMLSettings htmlSettings = Docx4J.createHTMLSettings();
-//        htmlSettings.setWmlPackage(docx);
-//        htmlSettings.setImageIncludeUUID(true);
-//        htmlSettings.setImageDirPath(path+"_images");
-//        htmlSettings.setImageTargetUri(path.substring(path.lastIndexOf("/")+1)
-//                + "_images");
-//        Docx4jProperties.setProperty("docx4j.Convert.Out.HTML.OutputMethodXML",true);
-//        Docx4jProperties.setProperty("docx", true);
-//        FileOutputStream os = new FileOutputStream(new File(path+".html"));
-//        Docx4J.toHTML(htmlSettings,os,Docx4J.FLAG_EXPORT_PREFER_XSL);
-//    }
+    public void docxToHtml() throws Exception {
+        File file = new File("/home/truong02_bp/Downloads/1.ADD CK GH,DKX 1NG KCC.docx");
+        FileInputStream fis = new FileInputStream(file);
+        WordprocessingMLPackage docx = WordprocessingMLPackage.load(fis);
+        String path = "/home/truong02_bp/Desktop/result";
+        HTMLSettings htmlSettings = Docx4J.createHTMLSettings();
+        htmlSettings.setWmlPackage(docx);
+        htmlSettings.setImageIncludeUUID(true);
+        htmlSettings.setImageDirPath(path + "_images");
+        htmlSettings.setImageTargetUri(path.substring(path.lastIndexOf("/") + 1)
+                + "_images");
+        Docx4jProperties.setProperty("docx4j.Convert.Out.HTML.OutputMethodXML", true);
+        Docx4jProperties.setProperty("docx", true);
+        FileOutputStream os = new FileOutputStream(new File(path + ".html"));
+        Docx4J.toHTML(htmlSettings, os, Docx4J.FLAG_EXPORT_PREFER_XSL);
+    }
 
-//    public void htmlToDocx() throws IOException, Docx4JException, JAXBException {
-//        String stringFromFile = FileUtils.readFileToString(new File("/home/truong02_bp/Desktop/result.html"),"UTF-8");
-//        WordprocessingMLPackage docx = WordprocessingMLPackage.createPackage();
-//        NumberingDefinitionsPart parts = new NumberingDefinitionsPart();
-//        docx.getMainDocumentPart().addTargetPart(parts);
-//        parts.unmarshalDefaultNumbering();
-//        RFonts arialRFonts = Context.getWmlObjectFactory().createRFonts();
-//        arialRFonts.setAscii("Arial");
-//        arialRFonts.setHAnsi("Arial");
-//        XHTMLImporterImpl.addFontMapping("Arial",arialRFonts);
-//        XHTMLImporterImpl importer = new XHTMLImporterImpl(docx);
-//        importer.setHyperlinkStyle("Hyperlink");
-//        docx.getMainDocumentPart().getContent().addAll(importer.convert(stringFromFile,null));
-//        docx.save(new File("/home/truong02_bp/Desktop/result.docx"));
-//    }
+    public void htmlToDocx() throws IOException, Docx4JException, JAXBException {
+        String stringFromFile = FileUtils.readFileToString(new File("/home/truong02_bp/Desktop/result.html"), "UTF-8");
+        WordprocessingMLPackage docx = WordprocessingMLPackage.createPackage();
+        NumberingDefinitionsPart parts = new NumberingDefinitionsPart();
+        docx.getMainDocumentPart().addTargetPart(parts);
+        parts.unmarshalDefaultNumbering();
+        RFonts arialRFonts = Context.getWmlObjectFactory().createRFonts();
+        arialRFonts.setAscii("Arial");
+        arialRFonts.setHAnsi("Arial");
+        XHTMLImporterImpl.addFontMapping("Arial", arialRFonts);
+        XHTMLImporterImpl importer = new XHTMLImporterImpl(docx);
+        importer.setHyperlinkStyle("Hyperlink");
+        docx.getMainDocumentPart().getContent().addAll(importer.convert(stringFromFile, null));
+        docx.save(new File("/home/truong02_bp/Desktop/result.docx"));
+    }
 }

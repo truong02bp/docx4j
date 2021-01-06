@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.io.ByteArrayOutputStream;
@@ -28,34 +29,6 @@ public class HomeController {
 
     private static Map<Integer, String> map = new HashMap<>();
     private static int id = 0;
-
-//    @GetMapping("/trang-chu")
-//    public ResponseEntity<byte[]> homePage() throws Exception {
-//        Document document = new Document();
-//        document.loadFromFile("/home/truong02_bp/Desktop/template.docx");
-//        String[] fields = document.getMailMerge().getMergeFieldNames();
-//        Map<String, String> values = new HashMap<>();
-//        Person person = new Person("Trường", "Hà Đông", "Siten", "0964279710");
-//        String[] items = person.toString().split(";");
-//        for (String item : items) {
-//            String[] data = item.split("=");
-//            values.put(data[0], data[1]);
-//        }
-//        String[] value = new String[fields.length + 1];
-//        for (int i = 0; i < fields.length; i++)
-//            value[i] = values.get(fields[i]);
-//        document.getMailMerge().execute(fields, value);
-//        ByteArrayOutputStream os = new ByteArrayOutputStream();
-////        document.saveToStream(os,FileFormat.Docx);
-//        byte[] bytes = os.toByteArray();
-//        String name = "result";
-//        String type = "docx";
-//        return ResponseEntity.ok()
-//                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-//                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + name + "." + type)
-//                .body(bytes);
-//    }
-
 
     @GetMapping("/docx")
     public ResponseEntity<byte[]> ckeditor(@RequestParam("id") int id) throws Exception {
