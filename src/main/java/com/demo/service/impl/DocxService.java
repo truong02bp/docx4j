@@ -8,20 +8,23 @@ import org.apache.commons.io.FileUtils;
 import org.docx4j.*;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.convert.out.HTMLSettings;
+import org.docx4j.dml.wordprocessingDrawing.Inline;
 import org.docx4j.jaxb.Context;
 import org.docx4j.jaxb.XPathBinderAssociationIsPartialException;
-import org.docx4j.model.fields.FieldUpdater;
 import org.docx4j.model.fields.merge.DataFieldName;
 import org.docx4j.model.fields.merge.MailMerger;
+import org.docx4j.openpackaging.Base;
+import org.docx4j.openpackaging.contenttype.ContentTypeManager;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
+import org.docx4j.openpackaging.io.Load;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+import org.docx4j.openpackaging.parts.Part;
+import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPartAbstractImage;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
+import org.docx4j.relationships.Relationship;
 import org.docx4j.wml.*;
-
 import org.springframework.stereotype.Service;
-
-import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import java.io.*;
 import java.math.BigInteger;
@@ -134,14 +137,12 @@ public class DocxService {
                 mailMerges = getAllMergeFields(textFields);
             for (String mailMerge : mailMerges) {
                 String value = content[random.nextInt(4)];
-                if (mailMerge.equals("ĐT_HDTC") || mailMerge.equals("Lãi_suất_ghi_trên_KUNN") || mailMerge.equals("ĐT_HDTC")) {
+                if (mailMerge.equals("Lãi_suất_ghi_trên_KUNN") || mailMerge.equals("ĐT_HDTC")) {
                     document = replaceTextByBullets(document, "0964279710\nĐiện thoại 2 : 12345\nĐiện thoại 3 : 5678", mailMerge);
                 } else
                     values.put(new DataFieldName(mailMerge), value);
             }
-
             MailMerger.setMERGEFIELDInOutput(MailMerger.OutputField.KEEP_MERGEFIELD);
-
             try {
                 MailMerger.performMerge(document, values, false);
                 Docx4J.save(document, byteArrayOutputStream);
@@ -203,7 +204,6 @@ public class DocxService {
                     int index = listToModify.indexOf(paragraph);
                     // remove the paragraph
                     listToModify.remove(index);
-                    // add html
                     if (paragraph.getPPr().getNumPr() == null) {
                         ObjectFactory factory = new ObjectFactory();
                         PPrBase.NumPr numPr = factory.createPPrBaseNumPr();
@@ -257,15 +257,52 @@ public class DocxService {
             o = XmlUtils.unwrap(o);
             Text text = (Text) o;
             String value = text.getValue();
-            String key = "MERGEFIELD ";
-            if (value.contains(key)) {
-                String name = value.substring(key.length());
+            String mergeField = "MERGEFIELD ";
+            if (value.contains(mergeField)) {
+                String name = value.substring(mergeField.length());
                 if (name.contains("\""))
                     name = name.substring(1, name.length() - 1);
+                if (name.contains("\\"))
+                    name = name.substring(0, name.lastIndexOf("\\")).trim();
                 mailMerges.add(name);
             }
         }
         return mailMerges;
+    }
+
+    public void test() throws Exception {
+        InputStream is = null;
+        WordprocessingMLPackage document = null;
+        try {
+            is = new FileInputStream("C:\\Users\\truon\\Desktop\\truong.docx");
+//            is = new ByteArrayInputStream(file.getBytes());
+            document = WordprocessingMLPackage.load(is);
+        } catch (IOException | Docx4JException e) {
+            e.printStackTrace();
+        }
+        File file = new File("C:\\Users\\truon\\Desktop\\qr.jpg");
+        byte[] bytes = FileUtils.readFileToByteArray(file);
+        String filenameHint = null;
+        String altText = null;
+        int id1 = 0;
+        int id2 = 1;
+        P p = newImage(document, bytes, filenameHint, altText, id1, id2);
+        document.getMainDocumentPart().addObject(p);
+        document.save(new File("C:\\Users\\truon\\Desktop\\c.docx"));
+    }
+
+    public P newImage(WordprocessingMLPackage wordMLPackage, byte[] bytes,
+                      String filenameHint, String altText, int id1, int id2) throws Exception {
+        BinaryPartAbstractImage imagePart = BinaryPartAbstractImage.createImagePart(wordMLPackage, bytes);
+        Inline inline = imagePart.createImageInline(filenameHint, altText, id1, id2,false);
+        ObjectFactory factory = new ObjectFactory();
+        P p = factory.createP();
+        R run = factory.createR();
+        p.getContent().add(run);
+        Drawing drawing = factory.createDrawing();
+        run.getContent().add(drawing);
+        drawing.getAnchorOrInline().add(inline);
+        return p;
     }
 
     public void docxToHtml() throws Exception {
@@ -300,4 +337,5 @@ public class DocxService {
         docx.getMainDocumentPart().getContent().addAll(importer.convert(stringFromFile, null));
         docx.save(new File("/home/truong02_bp/Desktop/result.docx"));
     }
+
 }
