@@ -64,19 +64,13 @@ public class HomeController {
 
     @GetMapping("/export-pdf")
     public ResponseEntity<?> exportPdf() {
-//        byte[] bytes = docxService.fillMailMerge("pdf");
-        try {
-            docxService.test();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.setContentType(MediaType.parseMediaType("application/pdf"));
-//        String filename = "result.pdf";
-//        headers.add("content-disposition", "inline;filename=" + filename);
-//        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
-//        ResponseEntity<byte[]> result = new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
-//        return result;
-        return ResponseEntity.ok("ok");
+        byte[] bytes = docxService.fillMailMerge("pdf");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/pdf"));
+        String filename = "result.pdf";
+        headers.add("content-disposition", "inline;filename=" + filename);
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+        ResponseEntity<byte[]> result = new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
+        return result;
     }
 }
