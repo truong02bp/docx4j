@@ -8,6 +8,7 @@ import org.apache.commons.io.FileUtils;
 import org.docx4j.*;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.convert.out.HTMLSettings;
+import org.docx4j.dml.chartDrawing.CTPicture;
 import org.docx4j.dml.wordprocessingDrawing.Inline;
 import org.docx4j.jaxb.Context;
 import org.docx4j.jaxb.XPathBinderAssociationIsPartialException;
@@ -19,10 +20,13 @@ import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.io.Load;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.Part;
+import org.docx4j.openpackaging.parts.PartName;
 import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPartAbstractImage;
+import org.docx4j.openpackaging.parts.WordprocessingML.ImageJpegPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
 import org.docx4j.relationships.Relationship;
+import org.docx4j.vml.CTLine;
 import org.docx4j.wml.*;
 import org.springframework.stereotype.Service;
 import javax.xml.bind.JAXBException;
@@ -270,25 +274,26 @@ public class DocxService {
         return mailMerges;
     }
 
-    public void test() throws Exception {
+    public void insertImageToDocx() throws Exception {
         InputStream is = null;
-        WordprocessingMLPackage document = null;
+        WordprocessingMLPackage wordPackage  = null;
         try {
             is = new FileInputStream("C:\\Users\\truon\\Desktop\\truong.docx");
 //            is = new ByteArrayInputStream(file.getBytes());
-            document = WordprocessingMLPackage.load(is);
+            wordPackage = WordprocessingMLPackage.load(is);
         } catch (IOException | Docx4JException e) {
             e.printStackTrace();
         }
+        assert wordPackage != null;
         File file = new File("C:\\Users\\truon\\Desktop\\qr.jpg");
         byte[] bytes = FileUtils.readFileToByteArray(file);
         String filenameHint = null;
         String altText = null;
         int id1 = 0;
         int id2 = 1;
-        P p = newImage(document, bytes, filenameHint, altText, id1, id2);
-        document.getMainDocumentPart().addObject(p);
-        document.save(new File("C:\\Users\\truon\\Desktop\\c.docx"));
+        P p = newImage(wordPackage, bytes, filenameHint, altText, id1, id2);
+        wordPackage.getMainDocumentPart().getContent().add(p);
+        wordPackage.save(new File("C:\\Users\\truon\\Desktop\\b.docx"));
     }
 
     public P newImage(WordprocessingMLPackage wordMLPackage, byte[] bytes,

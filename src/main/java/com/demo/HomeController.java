@@ -73,4 +73,13 @@ public class HomeController {
         ResponseEntity<byte[]> result = new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
         return result;
     }
+    @GetMapping("/insert-image")
+    public ResponseEntity<?> insertImage(){
+        try {
+            docxService.insertImageToDocx();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return ResponseEntity.ok("Success");
+    }
 }
