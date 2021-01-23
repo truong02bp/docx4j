@@ -8,27 +8,20 @@ import org.apache.commons.io.FileUtils;
 import org.docx4j.*;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.convert.out.HTMLSettings;
-import org.docx4j.dml.chartDrawing.CTPicture;
 import org.docx4j.dml.wordprocessingDrawing.Inline;
 import org.docx4j.jaxb.Context;
 import org.docx4j.jaxb.XPathBinderAssociationIsPartialException;
 import org.docx4j.model.fields.merge.DataFieldName;
 import org.docx4j.model.fields.merge.MailMerger;
-import org.docx4j.openpackaging.Base;
-import org.docx4j.openpackaging.contenttype.ContentTypeManager;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
-import org.docx4j.openpackaging.io.Load;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
-import org.docx4j.openpackaging.parts.Part;
-import org.docx4j.openpackaging.parts.PartName;
 import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPartAbstractImage;
-import org.docx4j.openpackaging.parts.WordprocessingML.ImageJpegPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
-import org.docx4j.relationships.Relationship;
-import org.docx4j.vml.CTLine;
 import org.docx4j.wml.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import javax.xml.bind.JAXBException;
 import java.io.*;
 import java.math.BigInteger;
@@ -96,6 +89,45 @@ public class DocxService {
             document.save(result);
         }
         return result;
+    }
+
+    public List<String> getAllField(MultipartFile[] files) {
+        List<String> fields = new ArrayList<>();
+        for (MultipartFile file : files) {
+            InputStream is = null;
+            WordprocessingMLPackage document = null;
+            try {
+                is = new ByteArrayInputStream(file.getBytes());
+                document = WordprocessingMLPackage.load(is);
+            } catch (IOException | Docx4JException e) {
+                e.printStackTrace();
+            }
+            if (document != null) {
+                List<Object> checkboxes = null;
+                List<Object> textFields = null;
+                try {
+                    checkboxes = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
+                            false);
+                    textFields = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:instrText ", true);
+                } catch (JAXBException | XPathBinderAssociationIsPartialException e) {
+                    e.printStackTrace();
+                }
+                if (checkboxes != null)
+                    for (Object o : checkboxes) {
+                        o = XmlUtils.unwrap(o);
+                        CTFFCheckBox checkBox = (CTFFCheckBox) o;
+                        CTFFData data = (CTFFData) checkBox.getParent();
+                        CTFFName ctffName = (CTFFName) data.getNameOrEnabledOrCalcOnExit().get(0).getValue();
+                        String name = ctffName.getVal();
+                        System.out.println(ctffName.getVal());
+                        System.out.println(ctffName.getParent().toString());
+                        fields.add(name);
+                    }
+                if (textFields != null)
+                    fields.addAll(getAllMergeFields(textFields));
+            }
+        }
+        return fields;
     }
 
     public byte[] fillMailMerge(String type) {
@@ -276,7 +308,7 @@ public class DocxService {
 
     public void insertImageToDocx() throws Exception {
         InputStream is = null;
-        WordprocessingMLPackage wordPackage  = null;
+        WordprocessingMLPackage wordPackage = null;
         try {
             is = new FileInputStream("C:\\Users\\truon\\Desktop\\truong.docx");
 //            is = new ByteArrayInputStream(file.getBytes());
@@ -299,7 +331,7 @@ public class DocxService {
     public P newImage(WordprocessingMLPackage wordMLPackage, byte[] bytes,
                       String filenameHint, String altText, int id1, int id2) throws Exception {
         BinaryPartAbstractImage imagePart = BinaryPartAbstractImage.createImagePart(wordMLPackage, bytes);
-        Inline inline = imagePart.createImageInline(filenameHint, altText, id1, id2,false);
+        Inline inline = imagePart.createImageInline(filenameHint, altText, id1, id2, false);
         ObjectFactory factory = new ObjectFactory();
         P p = factory.createP();
         R run = factory.createR();
