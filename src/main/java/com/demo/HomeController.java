@@ -16,10 +16,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 
 @Controller
 public class HomeController {
@@ -54,29 +52,51 @@ public class HomeController {
 //    }
     @PostMapping("/files")
     public ResponseEntity<List<String>> getField(@RequestBody MultipartFile[] files) {
+        System.out.println(files.length);
         List<String> list = docxService.getAllField(files);
         return ResponseEntity.ok(list);
     }
 
-    @GetMapping("/export-docx")
-    public ResponseEntity<?> exportDocx() {
-        byte[] bytes = docxService.fillMailMerge("docx");
+    @PostMapping("/export-zip")
+    public ResponseEntity<?> exportZip(@RequestBody MultipartFile[] files) {
+        Random random = new Random();
+        String[] content = {"TỪ NAY DUYÊN KIẾP", "BỎ LẠI PHÍA SAU", "NGÀY VÀ BÓNG TỐI", "CHẲNG CÒN KHÁC NHAU"
+                , "CHẲNG CÓ NƠI NÀO YÊN BÌNH", "ĐƯỢC NHƯ EM BÊN ANH"};
+        Map<String,String> map = new HashMap<>();
+        docxService.getAllField(files).forEach(s -> {
+            map.put(s,content[random.nextInt(4)]);
+        });
+        String fileName = "result.zip";
+        byte[] bytes = docxService.filesToZip(files,map);
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=result.docx")
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename="+fileName)
                 .body(bytes);
     }
 
+//    @GetMapping("/export-docx")
+//    public ResponseEntity<?> exportDocx() {
+//        byte[] bytes = docxService.fillMailMerge();
+//        return ResponseEntity.ok()
+//                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+//                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=result.docx")
+//                .body(bytes);
+//    }
+
     @GetMapping("/export-pdf")
-    public ResponseEntity<?> exportPdf() {
-        byte[] bytes = docxService.fillMailMerge("pdf");
+    public ResponseEntity<?> exportPdf(@RequestBody MultipartFile file) {
+        byte[] bytes = null;
+        try {
+            bytes = docxService.docxToPdf(file.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("application/pdf"));
-        String filename = "result.pdf";
-        headers.add("content-disposition", "inline;filename=" + filename);
+        String fileName = "result.pdf";
+        headers.add("content-disposition", "inline;filename=" + fileName);
         headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
-        ResponseEntity<byte[]> result = new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
-        return result;
+        return new ResponseEntity<>(bytes, headers, HttpStatus.OK);
     }
 
     @GetMapping("/insert-image")
