@@ -1,7 +1,6 @@
 package com.demo;
 
 import com.demo.service.impl.DocxService;
-//import com.spire.doc.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -13,11 +12,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.ModelAndView;
-
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+//import com.spire.doc.Document;
 
 @Controller
 public class HomeController {
@@ -50,23 +51,34 @@ public class HomeController {
 //        ResponseEntity<byte[]> result = new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
 //        return result;
 //    }
-    @PostMapping("/files")
+    @PostMapping("/upload-files")
     public ResponseEntity<List<String>> getField(@RequestBody MultipartFile[] files) {
-        System.out.println(files.length);
         List<String> list = docxService.getAllField(files);
         return ResponseEntity.ok(list);
     }
-
+    @PostMapping("/doc-to-docx")
+    public ResponseEntity<?> toDocx(@RequestBody MultipartFile file) {
+        byte[] bytes = new byte[0];
+        try {
+            bytes = docxService.docToDocx(file.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=result.docx")
+                .body(bytes);
+    }
     @PostMapping("/export-zip")
     public ResponseEntity<?> exportZip(@RequestBody MultipartFile[] files) {
         Random random = new Random();
-        String[] content = {"TỪ NAY DUYÊN KIẾP", "BỎ LẠI PHÍA SAU", "NGÀY VÀ BÓNG TỐI", "CHẲNG CÒN KHÁC NHAU"
-                , "CHẲNG CÓ NƠI NÀO YÊN BÌNH", "ĐƯỢC NHƯ EM BÊN ANH"};
+        String[] content = {"TỪ NAY DUYÊN KIẾP\na", "BỎ LẠI PHÍA SAU\na", "NGÀY VÀ BÓNG TỐI\na", "CHẲNG CÒN KHÁC NHAU\na"
+                , "CHẲNG CÓ NƠI NÀO YÊN BÌNH\na", "ĐƯỢC NHƯ EM BÊN ANH\na"};
         Map<String,String> map = new HashMap<>();
         docxService.getAllField(files).forEach(s -> {
             map.put(s,content[random.nextInt(4)]);
         });
-        String fileName = "result.zip";
+        String fileName = "result1.zip";
         byte[] bytes = docxService.filesToZip(files,map);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/zip"))

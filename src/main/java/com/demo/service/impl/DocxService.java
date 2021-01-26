@@ -164,7 +164,6 @@ public class DocxService {
         InputStream is = null;
         WordprocessingMLPackage document = null;
         try {
-//            is = new FileInputStream("C:\\Users\\truon\\Desktop\\1.ADD-CK-GHDKX-1NG-KCC.docx");
             is = new ByteArrayInputStream(file.getBytes());
             document = WordprocessingMLPackage.load(is);
         } catch (IOException | Docx4JException e) {
@@ -198,8 +197,8 @@ public class DocxService {
             if (textFields != null)
                 mailMerges = getAllMergeFields(textFields);
             for (String mailMerge : mailMerges) {
-                if (mailMerge.equals("Lãi_suất_ghi_trên_KUNN") || mailMerge.equals("ĐT_HDTC")) {
-                    document = replaceTextByBullets(document, "0964279710\nĐiện thoại 2 : 12345\nĐiện thoại 3 : 5678", mailMerge);
+                if (mailMerge.contains("\n")) {
+                    document = replaceTextByBullets(document, map.get(mailMerge), mailMerge);
                 } else
                     values.put(new DataFieldName(mailMerge), map.get(mailMerge));
             }
@@ -220,6 +219,17 @@ public class DocxService {
             InputStream docxInputStream = new ByteArrayInputStream(bytes);
             IConverter converter = LocalConverter.builder().build();
             converter.convert(docxInputStream).as(DocumentType.DOCX).to(byteArrayOutputStream).as(DocumentType.PDF).execute();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return byteArrayOutputStream.toByteArray();
+    }
+    public byte[] docToDocx(byte[] bytes) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        try {
+            InputStream docxInputStream = new ByteArrayInputStream(bytes);
+            IConverter converter = LocalConverter.builder().build();
+            converter.convert(docxInputStream).as(DocumentType.DOC).to(byteArrayOutputStream).as(DocumentType.DOCX).execute();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -323,7 +333,7 @@ public class DocxService {
                     name = name.substring(1, name.length() - 1);
                 if (name.contains("\\"))
                     name = name.substring(0, name.lastIndexOf("\\")).trim();
-                mailMerges.add(name);
+                mailMerges.add(name.trim());
             }
         }
         return mailMerges;
