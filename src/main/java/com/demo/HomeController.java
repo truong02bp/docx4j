@@ -69,16 +69,17 @@ public class HomeController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=result.docx")
                 .body(bytes);
     }
+
     @PostMapping("/export-zip")
     public ResponseEntity<?> exportZip(@RequestBody MultipartFile[] files) {
         Random random = new Random();
-        String[] content = {"TỪ NAY DUYÊN KIẾP\na", "BỎ LẠI PHÍA SAU\na", "NGÀY VÀ BÓNG TỐI\na", "CHẲNG CÒN KHÁC NHAU\na"
-                , "CHẲNG CÓ NƠI NÀO YÊN BÌNH\na", "ĐƯỢC NHƯ EM BÊN ANH\na"};
+        String[] content = {"TỪ NAY DUYÊN KIẾP", "BỎ LẠI PHÍA SAU", "NGÀY VÀ BÓNG TỐI", "CHẲNG CÒN KHÁC NHAU"
+                , "CHẲNG CÓ NƠI NÀO YÊN BÌNH", "ĐƯỢC NHƯ EM BÊN ANH"};
         Map<String,String> map = new HashMap<>();
         docxService.getAllField(files).forEach(s -> {
             map.put(s,content[random.nextInt(4)]);
         });
-        String fileName = "result1.zip";
+        String fileName = "result.zip";
         byte[] bytes = docxService.filesToZip(files,map);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
@@ -111,13 +112,4 @@ public class HomeController {
         return new ResponseEntity<>(bytes, headers, HttpStatus.OK);
     }
 
-    @GetMapping("/insert-image")
-    public ResponseEntity<?> insertImage() {
-        try {
-            docxService.insertImageToDocx();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return ResponseEntity.ok("Success");
-    }
 }

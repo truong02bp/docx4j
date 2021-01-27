@@ -25,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.xml.bind.JAXBException;
 import java.io.*;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -100,7 +99,7 @@ public class DocxService {
         for (MultipartFile file : files)
             try {
 
-                InputStream is = new ByteArrayInputStream(fillMailMerge(file,map ));
+                InputStream is = new ByteArrayInputStream(fillMailMerge(file, map));
                 ZipEntry zipEntry = new ZipEntry(Objects.requireNonNull(file.getOriginalFilename()));
                 zipEntry.setSize(file.getSize());
                 zipOutputStream.putNextEntry(zipEntry);
@@ -120,89 +119,85 @@ public class DocxService {
     public List<String> getAllField(MultipartFile[] files) {
         List<String> fields = new ArrayList<>();
         for (MultipartFile file : files) {
-            InputStream is = null;
             WordprocessingMLPackage document = null;
             try {
-                is = new ByteArrayInputStream(file.getBytes());
+                InputStream is = new ByteArrayInputStream(file.getBytes());
                 document = WordprocessingMLPackage.load(is);
             } catch (IOException | Docx4JException e) {
                 e.printStackTrace();
             }
             if (document != null) {
-                List<Object> checkboxes = null;
-                List<Object> textFields = null;
+                List<Object> checkboxes = new ArrayList<>();
+                List<Object> textFields = new ArrayList<>();
                 try {
-                    checkboxes = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
-                            false);
-                    textFields = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:instrText ", false);
-
+                    checkboxes.addAll(document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
+                            false));
+                    textFields.addAll(document.getMainDocumentPart().getJAXBNodesViaXPath("//w:instrText ", false));
+                    textFields.addAll(document.getMainDocumentPart().getJAXBNodesViaXPath("//w:fldSimple", true));
                 } catch (JAXBException | XPathBinderAssociationIsPartialException e) {
                     e.printStackTrace();
                 }
-                if (checkboxes != null)
-                    for (Object o : checkboxes) {
-                        o = XmlUtils.unwrap(o);
-                        CTFFCheckBox checkBox = (CTFFCheckBox) o;
-                        CTFFData data = (CTFFData) checkBox.getParent();
-                        CTFFName ctffName = (CTFFName) data.getNameOrEnabledOrCalcOnExit().get(0).getValue();
-                        String name = ctffName.getVal();
-                        if (!fields.contains(name))
-                            fields.add(name);
-                    }
-                if (textFields != null)
-                    getAllMergeFields(textFields).forEach(field -> {
-                        if (!fields.contains(field))
-                            fields.add(field);
-                    });
-            }
-        }
-        return fields;
-    }
-
-    public byte[] fillMailMerge(MultipartFile file, Map<String,String> map) {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        InputStream is = null;
-        WordprocessingMLPackage document = null;
-        try {
-            is = new ByteArrayInputStream(file.getBytes());
-            document = WordprocessingMLPackage.load(is);
-        } catch (IOException | Docx4JException e) {
-            e.printStackTrace();
-        }
-        if (document != null) {
-            List<String> mailMerges = new ArrayList<>();
-            List<Object> checkboxes = null;
-            List<Object> textFields = null;
-            try {
-                checkboxes = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
-                        false);
-                textFields = document.getMainDocumentPart().getJAXBNodesViaXPath("//w:instrText ", true);
-            } catch (JAXBException | XPathBinderAssociationIsPartialException e) {
-                e.printStackTrace();
-            }
-            Map<DataFieldName, String> values = new HashMap<>();
-            // solve check box
-            if (checkboxes != null)
                 for (Object o : checkboxes) {
                     o = XmlUtils.unwrap(o);
                     CTFFCheckBox checkBox = (CTFFCheckBox) o;
                     CTFFData data = (CTFFData) checkBox.getParent();
                     CTFFName ctffName = (CTFFName) data.getNameOrEnabledOrCalcOnExit().get(0).getValue();
                     String name = ctffName.getVal();
-                    BooleanDefaultTrue booleanDefaultTrue = new BooleanDefaultTrue();
-                    booleanDefaultTrue.setVal(true);
-                    checkBox.setChecked(booleanDefaultTrue);
+                    if (!fields.contains(name))
+                        fields.add(name);
                 }
+                getAllMergeFields(textFields).forEach(field -> {
+                    if (!fields.contains(field))
+                        fields.add(field);
+                });
+            }
+        }
+        return fields;
+    }
+
+    public byte[] fillMailMerge(MultipartFile file, Map<String, String> map) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        WordprocessingMLPackage document = null;
+        try {
+            InputStream is = new ByteArrayInputStream(file.getBytes());
+            document = WordprocessingMLPackage.load(is);
+        } catch (IOException | Docx4JException e) {
+            e.printStackTrace();
+        }
+        if (document != null) {
+            List<Object> checkboxes = new ArrayList<>();
+            List<Object> textFields = new ArrayList<>();
+            try {
+                checkboxes.addAll(document.getMainDocumentPart().getJAXBNodesViaXPath("//w:checkBox",
+                        false));
+                textFields.addAll(document.getMainDocumentPart().getJAXBNodesViaXPath("//w:instrText ", false));
+                textFields.addAll(document.getMainDocumentPart().getJAXBNodesViaXPath("//w:fldSimple", true));
+            } catch (JAXBException | XPathBinderAssociationIsPartialException e) {
+                e.printStackTrace();
+            }
+            Map<DataFieldName, String> values = new HashMap<>();
+            // solve check box
+            for (Object o : checkboxes) {
+                o = XmlUtils.unwrap(o);
+                CTFFCheckBox checkBox = (CTFFCheckBox) o;
+/*                CTFFData data = (CTFFData) checkBox.getParent();
+                CTFFName ctffName = (CTFFName) data.getNameOrEnabledOrCalcOnExit().get(0).getValue();
+                String name = ctffName.getVal();
+ */
+                BooleanDefaultTrue booleanDefaultTrue = new BooleanDefaultTrue();
+                booleanDefaultTrue.setVal(true);
+                checkBox.setChecked(booleanDefaultTrue);
+            }
             // solve merge field
-            if (textFields != null)
-                mailMerges = getAllMergeFields(textFields);
+            List<String> mailMerges = getAllMergeFields(textFields);
             for (String mailMerge : mailMerges) {
-                if (mailMerge.contains("\n")) {
+                if (map.get(mailMerge).contains("\n")) {
                     document = replaceTextByBullets(document, map.get(mailMerge), mailMerge);
                 } else
                     values.put(new DataFieldName(mailMerge), map.get(mailMerge));
             }
             MailMerger.setMERGEFIELDInOutput(MailMerger.OutputField.KEEP_MERGEFIELD);
+            insertImageToDocx(document);
             try {
                 MailMerger.performMerge(document, values, false);
                 Docx4J.save(document, byteArrayOutputStream);
@@ -224,6 +219,7 @@ public class DocxService {
         }
         return byteArrayOutputStream.toByteArray();
     }
+
     public byte[] docToDocx(byte[] bytes) {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         try {
@@ -257,6 +253,7 @@ public class DocxService {
             }
             final String identifier = paragraphText.toString();
             if (identifier.contains(key)) {
+                System.out.println(identifier);
                 String prefix = "";
                 if (identifier.lastIndexOf("MERGEFIELD " + key) != -1)
                     prefix = identifier.substring(0, identifier.lastIndexOf("MERGEFIELD " + key));
@@ -273,17 +270,17 @@ public class DocxService {
                     int index = listToModify.indexOf(paragraph);
                     // remove the paragraph
                     listToModify.remove(index);
-                    if (paragraph.getPPr().getNumPr() == null) {
-                        ObjectFactory factory = new ObjectFactory();
-                        PPrBase.NumPr numPr = factory.createPPrBaseNumPr();
-                        paragraph.getPPr().setNumPr(numPr);
-                        PPrBase.NumPr.NumId numIdElement = factory.createPPrBaseNumPrNumId();
-                        numPr.setNumId(numIdElement);
-                        numIdElement.setVal(BigInteger.ZERO);
-                        PPrBase.NumPr.Ilvl ilvlElement = factory.createPPrBaseNumPrIlvl();
-                        numPr.setIlvl(ilvlElement);
-                        ilvlElement.setVal(BigInteger.ZERO);
-                    }
+//                    if (paragraph.getPPr().getNumPr() == null) {
+//                        ObjectFactory factory = new ObjectFactory();
+//                        PPrBase.NumPr numPr = factory.createPPrBaseNumPr();
+//                        paragraph.getPPr().setNumPr(numPr);
+//                        PPrBase.NumPr.NumId numIdElement = factory.createPPrBaseNumPrNumId();
+//                        numPr.setNumId(numIdElement);
+//                        numIdElement.setVal(BigInteger.ZERO);
+//                        PPrBase.NumPr.Ilvl ilvlElement = factory.createPPrBaseNumPrIlvl();
+//                        numPr.setIlvl(ilvlElement);
+//                        ilvlElement.setVal(BigInteger.ZERO);
+//                    }
                     listToModify.addAll(index, createBullets(prefix, text, paragraph));
                 }
             }
@@ -324,8 +321,14 @@ public class DocxService {
         List<String> mailMerges = new ArrayList<>();
         for (Object o : textFields) {
             o = XmlUtils.unwrap(o);
-            Text text = (Text) o;
-            String value = text.getValue();
+            String value = "";
+            if (o instanceof Text) {
+                Text text = (Text) o;
+                value = text.getValue();
+            } else if (o instanceof CTSimpleField) {
+                CTSimpleField text = (CTSimpleField) o;
+                value = text.getInstr();
+            }
             String mergeField = "MERGEFIELD ";
             if (value.contains(mergeField)) {
                 String name = value.substring(mergeField.length());
@@ -339,26 +342,30 @@ public class DocxService {
         return mailMerges;
     }
 
-    public void insertImageToDocx() throws Exception {
-        InputStream is = null;
-        WordprocessingMLPackage wordPackage = null;
+    public void insertImageToDocx(WordprocessingMLPackage wordPackage) {
+        File file = new File("C:\\Users\\truon\\Desktop\\qr.jpg");
+        byte[] bytes = new byte[0];
         try {
-            is = new FileInputStream("C:\\Users\\truon\\Desktop\\truong.docx");
-//            is = new ByteArrayInputStream(file.getBytes());
-            wordPackage = WordprocessingMLPackage.load(is);
-        } catch (IOException | Docx4JException e) {
+            bytes = FileUtils.readFileToByteArray(file);
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        assert wordPackage != null;
-        File file = new File("C:\\Users\\truon\\Desktop\\qr.jpg");
-        byte[] bytes = FileUtils.readFileToByteArray(file);
-        String filenameHint = null;
-        String altText = null;
+        String filenameHint = "test";
+        String altText = "test";
         int id1 = 0;
         int id2 = 1;
-        P p = newImage(wordPackage, bytes, filenameHint, altText, id1, id2);
+        P p = null;
+        try {
+            p = newImage(wordPackage, bytes, filenameHint, altText, id1, id2);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         wordPackage.getMainDocumentPart().getContent().add(p);
-        wordPackage.save(new File("C:\\Users\\truon\\Desktop\\b.docx"));
+        try {
+            wordPackage.save(new File("C:\\Users\\truon\\Desktop\\b.docx"));
+        } catch (Docx4JException e) {
+            e.printStackTrace();
+        }
     }
 
     public P newImage(WordprocessingMLPackage wordMLPackage, byte[] bytes,
